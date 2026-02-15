@@ -7,14 +7,31 @@ A lightweight desktop app for creating [Mermaid](https://mermaid.js.org/) diagra
 ## Features
 
 - **Split-pane editor** — CodeMirror 6 on the left, live SVG preview on the right
+- **Mermaid syntax highlighting** — custom CodeMirror language mode colors keywords, arrows, comments, strings
+- **Multiple tabs** — open several `.mmd` files at once, `Ctrl+N` new tab, `Ctrl+W` close tab
+- **Auto-save** — editor state persists to localStorage so nothing is lost on crash
+- **Recent files** — quickly reopen recently used files from the toolbar
 - **Zoomable preview** — scroll to zoom, Alt+drag to pan, fit-to-view button
 - **8 diagram templates** — Flowchart, Sequence, Class, State, ER, Gantt, Pie, Git Graph
 - **Smart preprocessor** — automatically quotes labels with special characters so `()`, `'`, `&` just work
 - **File operations** — open / save `.mmd` files with native OS dialogs
-- **Export** — SVG, PNG (2x retina), clipboard copy
+- **Export** — SVG file, PNG file (2× retina), copy as PNG or SVG to clipboard
+- **Ctrl+C → PNG** — click the diagram preview and press `Ctrl+C` (or `Cmd+C` on macOS) to copy the diagram as a PNG image, ready to paste into Word or Google Docs
 - **Dark / light theme** — toggle or follow OS preference
-- **Keyboard shortcuts** — `Ctrl+S` save, `Ctrl+Shift+S` save as, `Ctrl+O` open
 - **Cross-platform** — Windows, macOS (Intel + Apple Silicon)
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+N` | New tab |
+| `Ctrl+W` | Close tab |
+| `Ctrl+O` | Open file |
+| `Ctrl+S` | Save |
+| `Ctrl+Shift+S` | Save as |
+| `Ctrl+C` | Copy diagram as PNG (when preview is focused) |
+
+> On macOS, use `Cmd` instead of `Ctrl`.
 
 ## Screenshot
 
@@ -62,15 +79,19 @@ sirene/
 │   ├── App.tsx                 # Layout, state, keyboard shortcuts
 │   ├── components/
 │   │   ├── Toolbar.tsx         # File ops, templates, export, theme toggle
-│   │   ├── Editor.tsx          # CodeMirror 6 wrapper
+│   │   ├── TabBar.tsx          # Multi-tab bar with close/new buttons
+│   │   ├── Editor.tsx          # CodeMirror 6 wrapper + Mermaid language
 │   │   ├── Preview.tsx         # Mermaid renderer + zoom/pan viewport
 │   │   ├── StatusBar.tsx       # Status indicator
 │   │   └── ui/                 # shadcn/ui primitives
 │   ├── hooks/
 │   │   ├── useTheme.ts         # Dark/light + OS preference
-│   │   └── useFileOperations.ts
+│   │   └── useTabs.ts          # Multi-tab state, file ops, auto-save
 │   ├── lib/
+│   │   ├── clipboard.ts        # SVG→PNG conversion + native clipboard copy
+│   │   ├── mermaid-lang.ts     # Custom CodeMirror language for Mermaid
 │   │   ├── preprocessor.ts     # Auto-quote labels with special chars
+│   │   ├── store.ts            # localStorage persistence (tabs, recent files)
 │   │   ├── templates.ts        # 8 Mermaid diagram templates
 │   │   └── utils.ts            # cn() utility
 │   └── styles/
