@@ -42,7 +42,6 @@ interface ToolbarProps {
   onTemplateSelect: (template: string) => void;
   onOpenRecent: (filePath: string) => void;
   onClearRecent: () => void;
-  onNewTab: () => void;
 }
 
 const TEMPLATE_LABELS: Record<string, string> = {
@@ -103,7 +102,6 @@ export function Toolbar({
   onTemplateSelect,
   onOpenRecent,
   onClearRecent,
-  onNewTab,
 }: ToolbarProps) {
   return (
     <div className="flex h-11 items-center gap-1 border-b bg-background px-3 select-none">
@@ -115,10 +113,6 @@ export function Toolbar({
       <Separator orientation="vertical" className="mx-1 h-5" />
 
       {/* File operations */}
-      <ToolbarButton tooltip="New tab" shortcut="Ctrl+N" onClick={onNewTab}>
-        <FilePlus className="h-4 w-4" />
-      </ToolbarButton>
-
       <ToolbarButton tooltip="Open file" shortcut="Ctrl+O" onClick={onOpen}>
         <FolderOpen className="h-4 w-4" />
         <span className="hidden sm:inline">Open</span>
