@@ -38,7 +38,8 @@ interface ToolbarProps {
   onSaveAs: () => void;
   onExportSvg: () => void;
   onExportPng: () => void;
-  onCopyClipboard: () => void;
+  onCopySvg: () => void;
+  onCopyPng: () => void;
   onTemplateSelect: (template: string) => void;
   onOpenRecent: (filePath: string) => void;
   onClearRecent: () => void;
@@ -98,7 +99,8 @@ export function Toolbar({
   onSaveAs,
   onExportSvg,
   onExportPng,
-  onCopyClipboard,
+  onCopySvg,
+  onCopyPng,
   onTemplateSelect,
   onOpenRecent,
   onClearRecent,
@@ -228,6 +230,7 @@ export function Toolbar({
           </TooltipContent>
         </Tooltip>
         <DropdownMenuContent align="start">
+          <DropdownMenuLabel>Save to file</DropdownMenuLabel>
           <DropdownMenuItem onClick={onExportSvg}>
             <Download className="h-4 w-4" />
             Export as SVG
@@ -237,10 +240,15 @@ export function Toolbar({
             Export as PNG
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={onCopyClipboard}>
+          <DropdownMenuLabel>Copy to clipboard</DropdownMenuLabel>
+          <DropdownMenuItem onClick={onCopyPng}>
             <ClipboardCopy className="h-4 w-4" />
-            Copy SVG to clipboard
+            Copy as PNG
             <DropdownMenuShortcut>Ctrl+C</DropdownMenuShortcut>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onCopySvg}>
+            <ClipboardCopy className="h-4 w-4" />
+            Copy as SVG
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

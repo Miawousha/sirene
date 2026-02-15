@@ -207,7 +207,7 @@ export const Preview = forwardRef<PreviewHandle, PreviewProps>(
     const zoomPercent = Math.round(zoom * 100);
 
     return (
-      <div className="flex h-full flex-col bg-background">
+      <div className="flex h-full flex-col bg-background outline-none" tabIndex={0}>
         {/* Header with zoom controls */}
         <div className="flex h-8 items-center gap-1 border-b bg-muted/50 px-3">
           <Eye className="h-3.5 w-3.5 text-muted-foreground" />

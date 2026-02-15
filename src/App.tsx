@@ -133,15 +133,25 @@ export default function App() {
     }
   }, [showToast]);
 
-  const handleCopyClipboard = useCallback(async () => {
+  const handleCopySvg = useCallback(async () => {
     const svg = previewRef.current?.getSvg();
     if (!svg) return;
     try {
-      const { writeText } = await import(
-        "@tauri-apps/plugin-clipboard-manager"
-      );
-      await writeText(svg);
+      const { copySvgToClipboard } = await import("@/lib/clipboard");
+      await copySvgToClipboard(svg);
       showToast("SVG copied to clipboard");
+    } catch {
+      showToast("Copy failed");
+    }
+  }, [showToast]);
+
+  const handleCopyPng = useCallback(async () => {
+    const svg = previewRef.current?.getSvg();
+    if (!svg) return;
+    try {
+      const { copyPngToClipboard } = await import("@/lib/clipboard");
+      await copyPngToClipboard(svg);
+      showToast("PNG copied to clipboard");
     } catch {
       showToast("Copy failed");
     }
@@ -153,45 +163,6 @@ export default function App() {
     },
     [setActiveCode]
   );
-
-  // Copy PNG to clipboard (for pasting into Word/Google Docs)
-  const handleCopyPng = useCallback(async () => {
-    const svg = previewRef.current?.getSvg();
-    if (!svg) return;
-
-    try {
-      const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const img = new Image();
-
-      img.onload = async () => {
-        const canvas = document.createElement("canvas");
-        const scale = 2;
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-        const ctx = canvas.getContext("2d")!;
-        ctx.scale(scale, scale);
-        ctx.drawImage(img, 0, 0);
-        URL.revokeObjectURL(url);
-
-        canvas.toBlob(async (pngBlob) => {
-          if (pngBlob && navigator.clipboard && navigator.clipboard.write) {
-            try {
-              await navigator.clipboard.write([
-                new ClipboardItem({ "image/png": pngBlob }),
-              ]);
-              showToast("PNG copied to clipboard");
-            } catch {
-              showToast("Clipboard write failed");
-            }
-          }
-        }, "image/png");
-      };
-      img.src = url;
-    } catch {
-      showToast("Copy failed");
-    }
-  }, [showToast]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -212,20 +183,22 @@ export default function App() {
         e.preventDefault();
         handleNewTab();
       }
-      // Ctrl+W to close current tab
+      // Ctrl/Cmd+W to close current tab
       if ((e.ctrlKey || e.metaKey) && e.key === "w") {
         e.preventDefault();
         closeTab(activeId);
       }
-      // Ctrl+C to copy diagram as PNG (only if no text is selected)
+      // Ctrl/Cmd+C to copy diagram as PNG when editor is NOT focused
       if ((e.ctrlKey || e.metaKey) && e.key === "c") {
-        const selection = window.getSelection();
-        const hasTextSelection = selection && selection.toString().length > 0;
-        
-        if (!hasTextSelection) {
+        // Check if the focus is inside the CodeMirror editor
+        const active = document.activeElement;
+        const isInEditor = active?.closest(".cm-editor") != null;
+
+        if (!isInEditor) {
           e.preventDefault();
           handleCopyPng();
         }
+        // Otherwise, let CodeMirror handle the normal text copy
       }
     };
     window.addEventListener("keydown", handler);
@@ -246,7 +219,8 @@ export default function App() {
           onSaveAs={handleSaveAs}
           onExportSvg={handleExportSvg}
           onExportPng={handleExportPng}
-          onCopyClipboard={handleCopyClipboard}
+          onCopySvg={handleCopySvg}
+          onCopyPng={handleCopyPng}
           onTemplateSelect={handleTemplateSelect}
           onOpenRecent={openRecentFile}
           onClearRecent={handleClearRecent}
