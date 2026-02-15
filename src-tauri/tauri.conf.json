@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Charty",
+  "productName": "Sirene",
   "version": "0.1.0",
-  "identifier": "com.charty.app",
+  "identifier": "com.sirene.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Charty",
+        "title": "Sirene",
         "width": 1200,
         "height": 750,
         "minWidth": 800,

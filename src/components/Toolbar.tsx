@@ -99,7 +99,7 @@ export function Toolbar({
     <div className="flex h-11 items-center gap-1 border-b bg-background px-3 select-none">
       {/* Logo / Title */}
       <span className="mr-2 text-sm font-bold tracking-tight text-primary">
-        Charty
+        Sirene
       </span>
 
       {fileName && (
