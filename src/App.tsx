@@ -99,6 +99,7 @@ export default function App() {
     try {
       const { save } = await import("@tauri-apps/plugin-dialog");
       const { writeFile } = await import("@tauri-apps/plugin-fs");
+      const { svgToPngBytes } = await import("@/lib/clipboard");
 
       const path = await save({
         filters: [{ name: "PNG", extensions: ["png"] }],
@@ -106,30 +107,13 @@ export default function App() {
       });
       if (!path) return;
 
-      const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const img = new Image();
-      img.onload = async () => {
-        const canvas = document.createElement("canvas");
-        const scale = 2;
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-        const ctx = canvas.getContext("2d")!;
-        ctx.scale(scale, scale);
-        ctx.drawImage(img, 0, 0);
-        URL.revokeObjectURL(url);
-
-        canvas.toBlob(async (pngBlob) => {
-          if (pngBlob) {
-            const arrayBuf = await pngBlob.arrayBuffer();
-            await writeFile(path, new Uint8Array(arrayBuf));
-            showToast("Exported PNG");
-          }
-        }, "image/png");
-      };
-      img.src = url;
-    } catch {
-      showToast("Export failed");
+      const pngBytes = await svgToPngBytes(svg);
+      await writeFile(path, pngBytes);
+      showToast("Exported PNG");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Export PNG failed:", err);
+      showToast(`Export failed: ${msg}`);
     }
   }, [showToast]);
 
@@ -147,13 +131,18 @@ export default function App() {
 
   const handleCopyPng = useCallback(async () => {
     const svg = previewRef.current?.getSvg();
-    if (!svg) return;
+    if (!svg) {
+      showToast("No diagram to copy");
+      return;
+    }
     try {
       const { copyPngToClipboard } = await import("@/lib/clipboard");
       await copyPngToClipboard(svg);
       showToast("PNG copied to clipboard");
-    } catch {
-      showToast("Copy failed");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Copy PNG failed:", err);
+      showToast(`Copy failed: ${msg}`);
     }
   }, [showToast]);
 
