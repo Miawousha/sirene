@@ -2,6 +2,7 @@ import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { EditorView } from "@codemirror/view";
 import { Code } from "lucide-react";
+import { mermaidLanguage } from "@/lib/mermaid-lang";
 
 interface EditorProps {
   code: string;
@@ -37,7 +38,7 @@ export function Editor({ code, onChange, theme }: EditorProps) {
             bracketMatching: true,
             autocompletion: false,
           }}
-          extensions={[EditorView.lineWrapping]}
+          extensions={[EditorView.lineWrapping, mermaidLanguage]}
         />
       </div>
     </div>

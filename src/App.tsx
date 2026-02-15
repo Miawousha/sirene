@@ -3,19 +3,18 @@ import { Allotment } from "allotment";
 import "allotment/dist/style.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toolbar } from "@/components/Toolbar";
+import { TabBar } from "@/components/TabBar";
 import { Editor } from "@/components/Editor";
 import { Preview, type PreviewHandle } from "@/components/Preview";
 import { StatusBar } from "@/components/StatusBar";
 import { useTheme } from "@/hooks/useTheme";
-import { useFileOperations } from "@/hooks/useFileOperations";
-import { TEMPLATES } from "@/lib/templates";
-
-const DEFAULT_CODE = TEMPLATES.flowchart;
+import { useTabs } from "@/hooks/useTabs";
+import { loadRecentFiles, clearRecentFiles } from "@/lib/store";
 
 export default function App() {
-  const [code, setCode] = useState(DEFAULT_CODE);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [recentFiles, setRecentFiles] = useState<string[]>(loadRecentFiles);
   const { theme, toggleTheme } = useTheme();
   const previewRef = useRef<PreviewHandle>(null);
 
@@ -24,11 +23,56 @@ export default function App() {
     setTimeout(() => setToast(null), 2200);
   }, []);
 
-  const { currentFile, openFile, saveFile, saveFileAs } = useFileOperations({
-    code,
-    setCode,
-    showToast,
-  });
+  const {
+    tabs,
+    activeTab,
+    activeId,
+    selectTab,
+    addTab,
+    closeTab,
+    setActiveCode,
+    openFile: doOpenFile,
+    openRecentFile: doOpenRecent,
+    saveFile,
+    saveFileAs,
+  } = useTabs({ showToast });
+
+  // Refresh recent files list whenever a file op happens
+  const refreshRecent = useCallback(() => {
+    setRecentFiles(loadRecentFiles());
+  }, []);
+
+  const openFile = useCallback(async () => {
+    await doOpenFile();
+    refreshRecent();
+  }, [doOpenFile, refreshRecent]);
+
+  const openRecentFile = useCallback(
+    async (filePath: string) => {
+      await doOpenRecent(filePath);
+      refreshRecent();
+    },
+    [doOpenRecent, refreshRecent]
+  );
+
+  const handleSave = useCallback(async () => {
+    await saveFile();
+    refreshRecent();
+  }, [saveFile, refreshRecent]);
+
+  const handleSaveAs = useCallback(async () => {
+    await saveFileAs();
+    refreshRecent();
+  }, [saveFileAs, refreshRecent]);
+
+  const handleClearRecent = useCallback(() => {
+    clearRecentFiles();
+    setRecentFiles([]);
+  }, []);
+
+  const handleNewTab = useCallback(() => {
+    addTab();
+  }, [addTab]);
 
   const handleExportSvg = useCallback(async () => {
     const svg = previewRef.current?.getSvg();
@@ -103,9 +147,12 @@ export default function App() {
     }
   }, [showToast]);
 
-  const handleTemplateSelect = useCallback((template: string) => {
-    setCode(template);
-  }, []);
+  const handleTemplateSelect = useCallback(
+    (template: string) => {
+      setActiveCode(template);
+    },
+    [setActiveCode]
+  );
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -113,19 +160,28 @@ export default function App() {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
         if (e.shiftKey) {
-          saveFileAs();
+          handleSaveAs();
         } else {
-          saveFile();
+          handleSave();
         }
       }
       if ((e.ctrlKey || e.metaKey) && e.key === "o") {
         e.preventDefault();
         openFile();
       }
+      if ((e.ctrlKey || e.metaKey) && e.key === "n") {
+        e.preventDefault();
+        handleNewTab();
+      }
+      // Ctrl+W to close current tab
+      if ((e.ctrlKey || e.metaKey) && e.key === "w") {
+        e.preventDefault();
+        closeTab(activeId);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [saveFile, saveFileAs, openFile]);
+  }, [handleSave, handleSaveAs, openFile, handleNewTab, closeTab, activeId]);
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -133,33 +189,50 @@ export default function App() {
         className={`flex h-screen w-screen flex-col overflow-hidden ${theme === "dark" ? "dark" : ""}`}
       >
         <Toolbar
-          currentFile={currentFile}
           theme={theme}
+          recentFiles={recentFiles}
           onToggleTheme={toggleTheme}
           onOpen={openFile}
-          onSave={saveFile}
-          onSaveAs={saveFileAs}
+          onSave={handleSave}
+          onSaveAs={handleSaveAs}
           onExportSvg={handleExportSvg}
           onExportPng={handleExportPng}
           onCopyClipboard={handleCopyClipboard}
           onTemplateSelect={handleTemplateSelect}
+          onOpenRecent={openRecentFile}
+          onClearRecent={handleClearRecent}
+          onNewTab={handleNewTab}
+        />
+        <TabBar
+          tabs={tabs}
+          activeId={activeId}
+          onSelect={selectTab}
+          onClose={closeTab}
+          onNew={handleNewTab}
         />
         <div className="min-h-0 flex-1">
           <Allotment defaultSizes={[400, 600]} className="split-container">
             <Allotment.Pane minSize={250}>
-              <Editor code={code} onChange={setCode} theme={theme} />
+              <Editor
+                code={activeTab?.code ?? ""}
+                onChange={setActiveCode}
+                theme={theme}
+              />
             </Allotment.Pane>
             <Allotment.Pane minSize={300}>
               <Preview
                 ref={previewRef}
-                code={code}
+                code={activeTab?.code ?? ""}
                 theme={theme}
                 onError={setError}
               />
             </Allotment.Pane>
           </Allotment>
         </div>
-        <StatusBar error={error} currentFile={currentFile} />
+        <StatusBar
+          error={error}
+          currentFile={activeTab?.filePath ?? null}
+        />
 
         {/* Toast */}
         {toast && (
