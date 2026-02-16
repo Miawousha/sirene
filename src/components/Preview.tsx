@@ -142,11 +142,10 @@ export const Preview = forwardRef<PreviewHandle, PreviewProps>(
       []
     );
 
-    // Pan handlers
+    // Pan handlers — left-click drag to pan
     const handleMouseDown = useCallback(
       (e: React.MouseEvent) => {
-        if (e.button === 1 || (e.button === 0 && e.altKey)) {
-          // Middle-click or Alt+click to pan
+        if (e.button === 0) {
           e.preventDefault();
           setIsPanning(true);
           panStartRef.current = { x: e.clientX, y: e.clientY };
@@ -276,7 +275,7 @@ export const Preview = forwardRef<PreviewHandle, PreviewProps>(
         <div
           ref={containerRef}
           className="relative min-h-0 flex-1 overflow-hidden"
-          style={{ cursor: isPanning ? "grabbing" : "default" }}
+          style={{ cursor: isPanning ? "grabbing" : "grab" }}
           onWheel={handleWheel}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
