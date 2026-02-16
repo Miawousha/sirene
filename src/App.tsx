@@ -4,11 +4,13 @@ import "allotment/dist/style.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toolbar } from "@/components/Toolbar";
 import { TabBar } from "@/components/TabBar";
+import { FileTree } from "@/components/FileTree";
 import { Editor } from "@/components/Editor";
 import { Preview, type PreviewHandle } from "@/components/Preview";
 import { StatusBar } from "@/components/StatusBar";
 import { useTheme } from "@/hooks/useTheme";
 import { useTabs } from "@/hooks/useTabs";
+import { useFileTree } from "@/hooks/useFileTree";
 import { PreferencesDialog } from "@/components/PreferencesDialog";
 import {
   loadRecentFiles,
@@ -46,10 +48,45 @@ export default function App() {
     saveFileAs,
   } = useTabs({ showToast });
 
+  const fileTree = useFileTree({ showToast });
+
+  // Auto-set file tree root when a file is opened
+  useEffect(() => {
+    if (activeTab?.filePath && !fileTree.rootPath) {
+      fileTree.setRootFromFile(activeTab.filePath);
+    }
+  }, [activeTab?.filePath, fileTree.rootPath, fileTree.setRootFromFile]);
+
   // Refresh recent files list whenever a file op happens
   const refreshRecent = useCallback(() => {
     setRecentFiles(loadRecentFiles());
   }, []);
+
+  // Open file from file tree
+  const openFileFromTree = useCallback(
+    async (filePath: string) => {
+      // Check if already open in a tab
+      const existing = tabs.find((t) => t.filePath === filePath);
+      if (existing) {
+        selectTab(existing.id);
+        return;
+      }
+
+      try {
+        const { readTextFile } = await import("@tauri-apps/plugin-fs");
+        const content = await readTextFile(filePath);
+        const { addRecentFile } = await import("@/lib/store");
+        addRecentFile(filePath);
+
+        const fileName = filePath.split(/[\\/]/).pop() ?? filePath;
+        addTab(content, filePath, fileName);
+        refreshRecent();
+      } catch {
+        showToast("Failed to open file");
+      }
+    },
+    [tabs, selectTab, addTab, refreshRecent, showToast]
+  );
 
   const openFile = useCallback(async () => {
     await doOpenFile();
@@ -241,7 +278,23 @@ export default function App() {
           onNew={handleNewTab}
         />
         <div className="min-h-0 flex-1">
-          <Allotment defaultSizes={[400, 600]} className="split-container">
+          <Allotment defaultSizes={[180, 400, 500]} className="split-container">
+            <Allotment.Pane minSize={140} preferredSize={200} snap>
+              <FileTree
+                rootPath={fileTree.rootPath}
+                tree={fileTree.tree}
+                expandedDirs={fileTree.expandedDirs}
+                activeFilePath={activeTab?.filePath ?? null}
+                onToggleDir={fileTree.toggleDir}
+                onOpenFile={openFileFromTree}
+                onPickFolder={fileTree.pickFolder}
+                onRefresh={fileTree.refresh}
+                onCreateFile={fileTree.createFile}
+                onCreateFolder={fileTree.createFolder}
+                onDeleteEntry={fileTree.deleteEntry}
+                onRenameEntry={fileTree.renameEntry}
+              />
+            </Allotment.Pane>
             <Allotment.Pane minSize={250}>
               <Editor
                 code={activeTab?.code ?? ""}
