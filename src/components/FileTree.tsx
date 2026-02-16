@@ -178,6 +178,7 @@ function TreeEntry({
     <>
       {/* Row — left-click opens, double-click renames, right-click shows menu */}
       <div
+        data-tree-entry
         className={cn(
           "group flex h-6 cursor-pointer items-center gap-1 rounded-sm px-1 text-[11px] outline-none hover:bg-muted/80 focus:bg-muted/80",
           isActive && "bg-accent text-accent-foreground"
@@ -358,6 +359,20 @@ export function FileTree({
   onRenameEntry,
 }: FileTreeProps) {
   const [creatingAtRoot, setCreatingAtRoot] = useState<"file" | "folder" | null>(null);
+  const [bgMenuOpen, setBgMenuOpen] = useState(false);
+  const [bgMenuPos, setBgMenuPos] = useState({ x: 0, y: 0 });
+
+  const handleBgContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      // Only trigger if right-clicking on the background, not on a tree entry
+      const target = e.target as HTMLElement;
+      if (target.closest("[data-tree-entry]")) return;
+      e.preventDefault();
+      setBgMenuPos({ x: e.clientX, y: e.clientY });
+      setBgMenuOpen(true);
+    },
+    []
+  );
 
   const rootName = rootPath
     ? rootPath.split(/[\\/]/).filter(Boolean).pop() ?? rootPath
@@ -447,7 +462,10 @@ export function FileTree({
       </div>
 
       {/* Tree */}
-      <div className="min-h-0 flex-1 overflow-y-auto py-1">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto py-1"
+        onContextMenu={handleBgContextMenu}
+      >
         {/* Root-level create input */}
         {creatingAtRoot && (
           <div className="flex h-6 items-center gap-1 px-1" style={{ paddingLeft: "4px" }}>
@@ -495,6 +513,26 @@ export function FileTree({
             />
           ))
         )}
+
+        {/* Background right-click context menu */}
+        <DropdownMenu open={bgMenuOpen} onOpenChange={setBgMenuOpen}>
+          <DropdownMenuTrigger asChild>
+            <span
+              className="fixed h-0 w-0"
+              style={{ left: bgMenuPos.x, top: bgMenuPos.y }}
+            />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-44">
+            <DropdownMenuItem onClick={() => { setBgMenuOpen(false); setCreatingAtRoot("file"); }}>
+              <Plus className="h-3.5 w-3.5" />
+              New file
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { setBgMenuOpen(false); setCreatingAtRoot("folder"); }}>
+              <FolderPlus className="h-3.5 w-3.5" />
+              New folder
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
