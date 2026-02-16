@@ -89,27 +89,24 @@ export function useTabs({ showToast }: UseTabsParams) {
 
   const closeTab = useCallback(
     (id: string) => {
-      setTabs((prev) => {
-        const idx = prev.findIndex((t) => t.id === id);
-        const next = prev.filter((t) => t.id !== id);
+      const idx = tabs.findIndex((t) => t.id === id);
+      const remaining = tabs.filter((t) => t.id !== id);
 
+      if (remaining.length === 0) {
+        // Closing the last tab — replace with a fresh default tab
+        const fresh = newTab();
+        setTabs([fresh]);
+        setActiveId(fresh.id);
+      } else {
+        setTabs(remaining);
         // If closing the active tab, activate an adjacent one
-        if (id === activeId && next.length > 0) {
-          const newIdx = Math.min(idx, next.length - 1);
-          setActiveId(next[newIdx].id);
+        if (id === activeId) {
+          const newIdx = Math.min(idx, remaining.length - 1);
+          setActiveId(remaining[newIdx].id);
         }
-
-        // Never leave zero tabs — create a default one
-        if (next.length === 0) {
-          const fresh = newTab();
-          setActiveId(fresh.id);
-          return [fresh];
-        }
-
-        return next;
-      });
+      }
     },
-    [activeId]
+    [tabs, activeId]
   );
 
   const selectTab = useCallback((id: string) => {
