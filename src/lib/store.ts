@@ -58,3 +58,29 @@ export function addRecentFile(filePath: string) {
 export function clearRecentFiles() {
   set("recentFiles", []);
 }
+
+/* ── Diagram style preferences ───────────────── */
+
+export type MermaidTheme = "default" | "dark" | "forest" | "neutral" | "base";
+
+export interface DiagramPreferences {
+  lightTheme: MermaidTheme;
+  darkTheme: MermaidTheme;
+  fontFamily: string;
+  customCss: string;
+}
+
+export const DEFAULT_PREFERENCES: DiagramPreferences = {
+  lightTheme: "default",
+  darkTheme: "dark",
+  fontFamily: '"Inter", "Segoe UI", system-ui, sans-serif',
+  customCss: "",
+};
+
+export function loadPreferences(): DiagramPreferences {
+  return { ...DEFAULT_PREFERENCES, ...get<Partial<DiagramPreferences>>("preferences", {}) };
+}
+
+export function savePreferences(prefs: DiagramPreferences) {
+  set("preferences", prefs);
+}

@@ -24,11 +24,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+import type { DiagramPreferences } from "@/lib/store";
 
 interface PreviewProps {
   code: string;
   theme: "light" | "dark";
   onError: (error: string | null) => void;
+  preferences: DiagramPreferences;
 }
 
 export interface PreviewHandle {
@@ -40,7 +42,7 @@ const MAX_ZOOM = 5;
 const ZOOM_STEP = 0.15;
 
 export const Preview = forwardRef<PreviewHandle, PreviewProps>(
-  function Preview({ code, theme, onError }, ref) {
+  function Preview({ code, theme, onError, preferences }, ref) {
     const [svgHtml, setSvgHtml] = useState<string>("");
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const renderIdRef = useRef(0);
@@ -88,11 +90,17 @@ export const Preview = forwardRef<PreviewHandle, PreviewProps>(
         }
 
         try {
+          const mermaidTheme =
+            currentTheme === "dark"
+              ? preferences.darkTheme
+              : preferences.lightTheme;
+
           mermaid.initialize({
             startOnLoad: false,
-            theme: currentTheme === "dark" ? "dark" : "default",
+            theme: mermaidTheme,
             securityLevel: "loose",
-            fontFamily: '"Inter", "Segoe UI", system-ui, sans-serif',
+            fontFamily: preferences.fontFamily,
+            themeCSS: preferences.customCss || undefined,
           });
 
           const id = `mermaid-${renderId}`;
@@ -121,7 +129,7 @@ export const Preview = forwardRef<PreviewHandle, PreviewProps>(
           }
         }
       },
-      [onError, cleanupMermaidDom]
+      [onError, cleanupMermaidDom, preferences]
     );
 
     // Debounced rendering

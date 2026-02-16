@@ -10,6 +10,7 @@ import {
   FilePlus,
   Clock,
   Trash2,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,6 +44,7 @@ interface ToolbarProps {
   onTemplateSelect: (template: string) => void;
   onOpenRecent: (filePath: string) => void;
   onClearRecent: () => void;
+  onOpenPreferences: () => void;
 }
 
 const TEMPLATE_LABELS: Record<string, string> = {
@@ -104,6 +106,7 @@ export function Toolbar({
   onTemplateSelect,
   onOpenRecent,
   onClearRecent,
+  onOpenPreferences,
 }: ToolbarProps) {
   return (
     <div className="flex h-11 items-center gap-1 border-b bg-background px-3 select-none">
@@ -255,6 +258,18 @@ export function Toolbar({
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* Preferences */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" size="icon-sm" onClick={onOpenPreferences}>
+            <Settings className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Diagram preferences</p>
+        </TooltipContent>
+      </Tooltip>
 
       {/* Theme toggle */}
       <Tooltip>

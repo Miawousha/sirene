@@ -9,12 +9,21 @@ import { Preview, type PreviewHandle } from "@/components/Preview";
 import { StatusBar } from "@/components/StatusBar";
 import { useTheme } from "@/hooks/useTheme";
 import { useTabs } from "@/hooks/useTabs";
-import { loadRecentFiles, clearRecentFiles } from "@/lib/store";
+import { PreferencesDialog } from "@/components/PreferencesDialog";
+import {
+  loadRecentFiles,
+  clearRecentFiles,
+  loadPreferences,
+  savePreferences,
+  type DiagramPreferences,
+} from "@/lib/store";
 
 export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [recentFiles, setRecentFiles] = useState<string[]>(loadRecentFiles);
+  const [preferences, setPreferences] = useState<DiagramPreferences>(loadPreferences);
+  const [prefsOpen, setPrefsOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const previewRef = useRef<PreviewHandle>(null);
 
@@ -146,6 +155,15 @@ export default function App() {
     }
   }, [showToast]);
 
+  const handleSavePreferences = useCallback(
+    (prefs: DiagramPreferences) => {
+      setPreferences(prefs);
+      savePreferences(prefs);
+      showToast("Preferences saved");
+    },
+    [showToast]
+  );
+
   const handleTemplateSelect = useCallback(
     (template: string) => {
       setActiveCode(template);
@@ -213,6 +231,7 @@ export default function App() {
           onTemplateSelect={handleTemplateSelect}
           onOpenRecent={openRecentFile}
           onClearRecent={handleClearRecent}
+          onOpenPreferences={() => setPrefsOpen(true)}
         />
         <TabBar
           tabs={tabs}
@@ -236,6 +255,7 @@ export default function App() {
                 code={activeTab?.code ?? ""}
                 theme={theme}
                 onError={setError}
+                preferences={preferences}
               />
             </Allotment.Pane>
           </Allotment>
@@ -243,6 +263,13 @@ export default function App() {
         <StatusBar
           error={error}
           currentFile={activeTab?.filePath ?? null}
+        />
+
+        <PreferencesDialog
+          open={prefsOpen}
+          onOpenChange={setPrefsOpen}
+          preferences={preferences}
+          onSave={handleSavePreferences}
         />
 
         {/* Toast */}
