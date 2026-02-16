@@ -1,10 +1,15 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 
 interface FileEntry {
   name: string;
   path: string;
   isDirectory: boolean;
   children?: FileEntry[];
+}
+
+interface UndoAction {
+  label: string;
+  execute: () => Promise<void>;
 }
 
 interface UseFileTreeParams {
@@ -62,6 +67,15 @@ export function useFileTree({ showToast }: UseFileTreeParams) {
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const loadingRef = useRef(false);
+  const undoStackRef = useRef<UndoAction[]>([]);
+
+  const pushUndo = useCallback((action: UndoAction) => {
+    undoStackRef.current.push(action);
+    // Cap the stack at 50 entries
+    if (undoStackRef.current.length > 50) {
+      undoStackRef.current.shift();
+    }
+  }, []);
 
   // Load root directory
   const loadRoot = useCallback(async (dirPath: string) => {
@@ -184,7 +198,7 @@ export function useFileTree({ showToast }: UseFileTreeParams) {
     }
   }, [rootPath, expandedDirs]);
 
-  // Create a new file
+  // Create a new file (with undo support)
   const createFile = useCallback(
     async (dirPath: string, fileName: string) => {
       const fullPath = dirPath.replace(/[\\/]$/, "") + "\\" + fileName;
@@ -196,6 +210,16 @@ export function useFileTree({ showToast }: UseFileTreeParams) {
         }
         await writeTextFile(fullPath, "flowchart TD\n    A[Start] --> B[End]\n");
         await refresh();
+
+        pushUndo({
+          label: `Create ${fileName}`,
+          execute: async () => {
+            const { remove } = await import("@tauri-apps/plugin-fs");
+            await remove(fullPath);
+            await refresh();
+          },
+        });
+
         showToast("File created");
         return fullPath;
       } catch {
@@ -203,7 +227,7 @@ export function useFileTree({ showToast }: UseFileTreeParams) {
         return null;
       }
     },
-    [refresh, showToast]
+    [refresh, showToast, pushUndo]
   );
 
   // Create a new folder
@@ -226,46 +250,89 @@ export function useFileTree({ showToast }: UseFileTreeParams) {
     [refresh, showToast]
   );
 
-  // Delete a file or folder
+  // Delete a file or folder (with undo support)
   const deleteEntry = useCallback(
     async (entryPath: string) => {
       try {
-        const { remove } = await import("@tauri-apps/plugin-fs");
+        const { remove, readTextFile } = await import("@tauri-apps/plugin-fs");
+
+        // Try to save file content for undo (only works for single files)
+        let savedContent: string | null = null;
+        const fileName = entryPath.split(/[\\/]/).pop() ?? entryPath;
+        try {
+          savedContent = await readTextFile(entryPath);
+        } catch {
+          // It's a folder or unreadable — undo won't restore content
+        }
+
         await remove(entryPath, { recursive: true });
         await refresh();
-        showToast("Deleted");
+
+        // Push undo action
+        if (savedContent !== null) {
+          pushUndo({
+            label: `Delete ${fileName}`,
+            execute: async () => {
+              const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+              await writeTextFile(entryPath, savedContent);
+              await refresh();
+            },
+          });
+        }
+
+        showToast("Deleted — Ctrl+Z to undo");
       } catch {
         showToast("Failed to delete");
       }
     },
-    [refresh, showToast]
+    [refresh, showToast, pushUndo]
   );
 
-  // Rename a file or folder
+  // Rename a file or folder (with undo support)
   const renameEntry = useCallback(
     async (oldPath: string, newName: string) => {
       const sep = oldPath.includes("/") ? "/" : "\\";
       const parts = oldPath.split(sep);
-      parts.pop();
+      const oldName = parts.pop()!;
       const newPath = parts.join(sep) + sep + newName;
       try {
         const { rename } = await import("@tauri-apps/plugin-fs");
         await rename(oldPath, newPath);
         await refresh();
-        showToast("Renamed");
+
+        pushUndo({
+          label: `Rename ${oldName} → ${newName}`,
+          execute: async () => {
+            const { rename: doRename } = await import("@tauri-apps/plugin-fs");
+            await doRename(newPath, oldPath);
+            await refresh();
+          },
+        });
+
+        showToast("Renamed — Ctrl+Z to undo");
         return newPath;
       } catch {
         showToast("Failed to rename");
         return null;
       }
     },
-    [refresh, showToast]
+    [refresh, showToast, pushUndo]
   );
 
-  // Auto-set root when no root is set but a file opens
-  useEffect(() => {
-    // This is called externally via setRootFromFile
-  }, []);
+  // Undo the last file operation
+  const undo = useCallback(async () => {
+    const action = undoStackRef.current.pop();
+    if (!action) {
+      showToast("Nothing to undo");
+      return;
+    }
+    try {
+      await action.execute();
+      showToast(`Undone: ${action.label}`);
+    } catch {
+      showToast("Undo failed");
+    }
+  }, [showToast]);
 
   return {
     rootPath,
@@ -281,5 +348,6 @@ export function useFileTree({ showToast }: UseFileTreeParams) {
     createFolder,
     deleteEntry,
     renameEntry,
+    undo,
   };
 }

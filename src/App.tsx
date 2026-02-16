@@ -234,7 +234,6 @@ export default function App() {
       }
       // Ctrl/Cmd+C to copy diagram as PNG when editor is NOT focused
       if ((e.ctrlKey || e.metaKey) && e.key === "c") {
-        // Check if the focus is inside the CodeMirror editor
         const active = document.activeElement;
         const isInEditor = active?.closest(".cm-editor") != null;
 
@@ -242,12 +241,22 @@ export default function App() {
           e.preventDefault();
           handleCopyPng();
         }
-        // Otherwise, let CodeMirror handle the normal text copy
+      }
+      // Ctrl/Cmd+Z to undo file operations when editor is NOT focused
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+        const active = document.activeElement;
+        const isInEditor = active?.closest(".cm-editor") != null;
+
+        if (!isInEditor) {
+          e.preventDefault();
+          fileTree.undo();
+        }
+        // Otherwise, let CodeMirror handle its own undo
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [handleSave, handleSaveAs, openFile, handleNewTab, closeTab, activeId, handleCopyPng]);
+  }, [handleSave, handleSaveAs, openFile, handleNewTab, closeTab, activeId, handleCopyPng, fileTree]);
 
   return (
     <TooltipProvider delayDuration={300}>
