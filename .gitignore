@@ -19,3 +19,7 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Binaries
+*.exe
+!src-tauri/target/
