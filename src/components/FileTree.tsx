@@ -23,6 +23,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -108,6 +109,8 @@ function TreeEntry({
 }) {
   const [creating, setCreating] = useState<"file" | "folder" | null>(null);
   const [renaming, setRenaming] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
 
   const isActive = !entry.isDirectory && entry.path === activeFilePath;
 
@@ -118,6 +121,32 @@ function TreeEntry({
       onOpenFile(entry.path);
     }
   }, [entry, onToggleDir, onOpenFile]);
+
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRenaming(true);
+  }, []);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenuPos({ x: e.clientX, y: e.clientY });
+    setMenuOpen(true);
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        onDeleteEntry(entry.path);
+      }
+      if (e.key === "F2") {
+        e.preventDefault();
+        setRenaming(true);
+      }
+    },
+    [entry.path, onDeleteEntry]
+  );
 
   const handleCreateFile = useCallback(
     async (name: string) => {
@@ -145,53 +174,59 @@ function TreeEntry({
     [entry.path, onRenameEntry]
   );
 
-  const handleDelete = useCallback(async () => {
-    await onDeleteEntry(entry.path);
-  }, [entry.path, onDeleteEntry]);
-
   return (
     <>
-      <DropdownMenu>
+      {/* Row — left-click opens, double-click renames, right-click shows menu */}
+      <div
+        className={cn(
+          "group flex h-6 cursor-pointer items-center gap-1 rounded-sm px-1 text-[11px] outline-none hover:bg-muted/80 focus:bg-muted/80",
+          isActive && "bg-accent text-accent-foreground"
+        )}
+        style={{ paddingLeft: `${depth * 14 + 4}px` }}
+        tabIndex={0}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
+        onKeyDown={handleKeyDown}
+      >
+        {entry.isDirectory ? (
+          <>
+            {expanded ? (
+              <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
+            )}
+            {expanded ? (
+              <FolderOpen className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+            ) : (
+              <FolderClosed className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+            )}
+          </>
+        ) : (
+          <>
+            <span className="w-3" />
+            <FileText className="h-3.5 w-3.5 shrink-0 text-blue-400" />
+          </>
+        )}
+        {renaming ? (
+          <InlineInput
+            defaultValue={entry.name}
+            placeholder="New name"
+            onSubmit={handleRename}
+            onCancel={() => setRenaming(false)}
+          />
+        ) : (
+          <span className="truncate">{entry.name}</span>
+        )}
+      </div>
+
+      {/* Right-click context menu */}
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <div
-            className={cn(
-              "group flex h-6 cursor-pointer items-center gap-1 rounded-sm px-1 text-[11px] hover:bg-muted/80",
-              isActive && "bg-accent text-accent-foreground"
-            )}
-            style={{ paddingLeft: `${depth * 14 + 4}px` }}
-            onClick={handleClick}
-            onContextMenu={(e) => e.preventDefault()}
-          >
-            {entry.isDirectory ? (
-              <>
-                {expanded ? (
-                  <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
-                ) : (
-                  <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
-                )}
-                {expanded ? (
-                  <FolderOpen className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-                ) : (
-                  <FolderClosed className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-                )}
-              </>
-            ) : (
-              <>
-                <span className="w-3" />
-                <FileText className="h-3.5 w-3.5 shrink-0 text-blue-400" />
-              </>
-            )}
-            {renaming ? (
-              <InlineInput
-                defaultValue={entry.name}
-                placeholder="New name"
-                onSubmit={handleRename}
-                onCancel={() => setRenaming(false)}
-              />
-            ) : (
-              <span className="truncate">{entry.name}</span>
-            )}
-          </div>
+          <span
+            className="fixed h-0 w-0"
+            style={{ left: menuPos.x, top: menuPos.y }}
+          />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-44">
           {entry.isDirectory && (
@@ -210,13 +245,15 @@ function TreeEntry({
           <DropdownMenuItem onClick={() => setRenaming(true)}>
             <Pencil className="h-3.5 w-3.5" />
             Rename
+            <DropdownMenuShortcut>F2</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={handleDelete}
+            onClick={() => onDeleteEntry(entry.path)}
             className="text-destructive focus:text-destructive"
           >
             <Trash2 className="h-3.5 w-3.5" />
             Delete
+            <DropdownMenuShortcut>Del</DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
