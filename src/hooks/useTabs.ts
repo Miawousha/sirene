@@ -109,6 +109,16 @@ export function useTabs({ showToast }: UseTabsParams) {
     [tabs, activeId]
   );
 
+  const closeTabByPath = useCallback(
+    (filePath: string) => {
+      const tab = tabs.find((t) => t.filePath === filePath);
+      if (tab) {
+        closeTab(tab.id);
+      }
+    },
+    [tabs, closeTab]
+  );
+
   const selectTab = useCallback((id: string) => {
     setActiveId(id);
   }, []);
@@ -261,6 +271,7 @@ export function useTabs({ showToast }: UseTabsParams) {
     selectTab,
     addTab,
     closeTab,
+    closeTabByPath,
     setActiveCode,
     openFile,
     openRecentFile,

@@ -41,6 +41,7 @@ export default function App() {
     selectTab,
     addTab,
     closeTab,
+    closeTabByPath,
     setActiveCode,
     openFile: doOpenFile,
     openRecentFile: doOpenRecent,
@@ -208,6 +209,36 @@ export default function App() {
     [setActiveCode]
   );
 
+  // Wrap deleteEntry to also close the corresponding tab
+  const handleDeleteEntry = useCallback(
+    async (entryPath: string) => {
+      await fileTree.deleteEntry(entryPath);
+      closeTabByPath(entryPath);
+    },
+    [fileTree.deleteEntry, closeTabByPath]
+  );
+
+  // Wrap renameEntry to also update the corresponding tab
+  const handleRenameEntry = useCallback(
+    async (oldPath: string, newName: string) => {
+      const newPath = await fileTree.renameEntry(oldPath, newName);
+      if (newPath) {
+        // Update the tab if it's open
+        const tab = tabs.find((t) => t.filePath === oldPath);
+        if (tab) {
+          // We need to update the tab's filePath and title
+          // useTabs doesn't expose updateTab, so we close and reopen
+          const { readTextFile } = await import("@tauri-apps/plugin-fs");
+          const content = await readTextFile(newPath);
+          closeTabByPath(oldPath);
+          addTab(content, newPath, newName);
+        }
+      }
+      return newPath;
+    },
+    [fileTree.renameEntry, tabs, closeTabByPath, addTab]
+  );
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -300,8 +331,8 @@ export default function App() {
                 onRefresh={fileTree.refresh}
                 onCreateFile={fileTree.createFile}
                 onCreateFolder={fileTree.createFolder}
-                onDeleteEntry={fileTree.deleteEntry}
-                onRenameEntry={fileTree.renameEntry}
+                onDeleteEntry={handleDeleteEntry}
+                onRenameEntry={handleRenameEntry}
               />
             </Allotment.Pane>
             <Allotment.Pane minSize={250}>
