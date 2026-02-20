@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { joinPath, detectSep, modKey } from "@/lib/platform";
 
 interface FileEntry {
   name: string;
@@ -32,7 +33,7 @@ async function readDirectory(dirPath: string): Promise<FileEntry[]> {
     // Skip hidden files/dirs
     if (entry.name.startsWith(".")) continue;
 
-    const fullPath = dirPath.replace(/[\\/]$/, "") + "\\" + entry.name;
+    const fullPath = joinPath(dirPath, entry.name);
 
     if (entry.isDirectory) {
       result.push({
@@ -99,7 +100,7 @@ export function useFileTree({ showToast }: UseFileTreeParams) {
   const setRootFromFile = useCallback(
     (filePath: string) => {
       // Extract parent directory
-      const sep = filePath.includes("/") ? "/" : "\\";
+      const sep = detectSep(filePath);
       const parts = filePath.split(sep);
       parts.pop();
       const dir = parts.join(sep);
@@ -201,7 +202,7 @@ export function useFileTree({ showToast }: UseFileTreeParams) {
   // Create a new file (with undo support)
   const createFile = useCallback(
     async (dirPath: string, fileName: string) => {
-      const fullPath = dirPath.replace(/[\\/]$/, "") + "\\" + fileName;
+      const fullPath = joinPath(dirPath, fileName);
       try {
         const { exists, writeTextFile } = await import("@tauri-apps/plugin-fs");
         if (await exists(fullPath)) {
@@ -233,7 +234,7 @@ export function useFileTree({ showToast }: UseFileTreeParams) {
   // Create a new folder
   const createFolder = useCallback(
     async (dirPath: string, folderName: string) => {
-      const fullPath = dirPath.replace(/[\\/]$/, "") + "\\" + folderName;
+      const fullPath = joinPath(dirPath, folderName);
       try {
         const { exists, mkdir } = await import("@tauri-apps/plugin-fs");
         if (await exists(fullPath)) {
@@ -280,7 +281,7 @@ export function useFileTree({ showToast }: UseFileTreeParams) {
           });
         }
 
-        showToast("Deleted — Ctrl+Z to undo");
+        showToast(`Deleted — ${modKey}+Z to undo`);
       } catch {
         showToast("Failed to delete");
       }
@@ -291,7 +292,7 @@ export function useFileTree({ showToast }: UseFileTreeParams) {
   // Rename a file or folder (with undo support)
   const renameEntry = useCallback(
     async (oldPath: string, newName: string) => {
-      const sep = oldPath.includes("/") ? "/" : "\\";
+      const sep = detectSep(oldPath);
       const parts = oldPath.split(sep);
       const oldName = parts.pop()!;
       const newPath = parts.join(sep) + sep + newName;
@@ -309,7 +310,7 @@ export function useFileTree({ showToast }: UseFileTreeParams) {
           },
         });
 
-        showToast("Renamed — Ctrl+Z to undo");
+        showToast(`Renamed — ${modKey}+Z to undo`);
         return newPath;
       } catch {
         showToast("Failed to rename");

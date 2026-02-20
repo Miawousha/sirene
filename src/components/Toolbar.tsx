@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { TEMPLATES } from "@/lib/templates";
+import { modKey } from "@/lib/platform";
 
 interface ToolbarProps {
   theme: "light" | "dark";
@@ -118,19 +119,19 @@ export function Toolbar({
       <Separator orientation="vertical" className="mx-1 h-5" />
 
       {/* File operations */}
-      <ToolbarButton tooltip="Open file" shortcut="Ctrl+O" onClick={onOpen}>
+      <ToolbarButton tooltip="Open file" shortcut={`${modKey}+O`} onClick={onOpen}>
         <FolderOpen className="h-4 w-4" />
         <span className="hidden sm:inline">Open</span>
       </ToolbarButton>
 
-      <ToolbarButton tooltip="Save" shortcut="Ctrl+S" onClick={onSave}>
+      <ToolbarButton tooltip="Save" shortcut={`${modKey}+S`} onClick={onSave}>
         <Save className="h-4 w-4" />
         <span className="hidden sm:inline">Save</span>
       </ToolbarButton>
 
       <ToolbarButton
         tooltip="Save As"
-        shortcut="Ctrl+Shift+S"
+        shortcut={`${modKey}+Shift+S`}
         onClick={onSaveAs}
       >
         <FilePlus className="h-4 w-4" />
@@ -247,7 +248,7 @@ export function Toolbar({
           <DropdownMenuItem onClick={onCopyPng}>
             <ClipboardCopy className="h-4 w-4" />
             Copy as PNG
-            <DropdownMenuShortcut>Ctrl+C</DropdownMenuShortcut>
+            <DropdownMenuShortcut>{modKey}+C</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onCopySvg}>
             <ClipboardCopy className="h-4 w-4" />
